@@ -1,0 +1,1 @@
+cmd: "%USERPROFILE%/SSH/winscp.com /script=sync_script.txt /parameter clock_station.py clock_station.py"

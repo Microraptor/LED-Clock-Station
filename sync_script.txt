@@ -1,0 +1,12 @@
+# Disable overwrite confirmations that conflict with the previous
+option confirm off
+# Connect
+open syncRPI
+# Upload file
+
+put -transfer=ascii %1% /usr/share/clockstation/%2%
+
+# Disconnect
+close
+# Exit WinSCP
+exit

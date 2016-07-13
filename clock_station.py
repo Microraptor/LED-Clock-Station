@@ -41,7 +41,7 @@ PIR_ENABLED = True
 I2C_BUS = 0  # 0 for Rev 1 and 1 for older RPI
 LED_COUNT = 60  # Number of LED pixels
 LED_CLOCKWISE = False  # If the strip is enumerated clockwise
-LED_TOP = 43  # The number of the LED which is on the very top
+LED_TOP = 44  # The number of the LED which is on the very top
 LED_PIN = 18  # Has to support PWM (only pin 18 on RPI Rev 1)
 LED_FREQ_HZ = 800000  # Signal frequency in hertz (usually 800000)
 LED_DMA = 5  # DMA channel to use for generating signal (try 5)
@@ -328,9 +328,9 @@ class ClockStationDaemon(object):
                 for j in range(i):
                     self.led_strip.setPixelColorRGB(
                         self.led_pixel(j),
-                        0,
                         255 - int(i * 255 // 30),
-                        int(i * 255 // 30)
+                        int(i * 255 // 30),
+                        0
                     )
                 self.led_strip.show()
                 time.sleep(0.02)
@@ -338,42 +338,50 @@ class ClockStationDaemon(object):
                 for j in range(i):
                     self.led_strip.setPixelColorRGB(
                         self.led_pixel(j),
-                        int((i - 30) * 255 // 30),
                         0,
-                        255 - int((i - 30) * 255 // 30)
+                        255 - int((i - 30) * 255 // 30),
+                        int((i - 30) * 255 // 30),
+                    )
+                self.led_strip.show()
+                time.sleep(0.02)
+            # Clear LEDs
+            for i in range(self.led_strip.numPixels()):
+                self.led_strip.setPixelColorRGB(self.led_pixel(i), 0, 0, 0)
+                for j in range(i + 1, self.led_strip.numPixels()):
+                    self.led_strip.setPixelColorRGB(
+                        self.led_pixel(j),
+                        int(i * 255 // self.led_strip.numPixels()),
+                        0,
+                        255 - int(i * 255 // self.led_strip.numPixels()),
                     )
                 self.led_strip.show()
                 time.sleep(0.02)
 
             # Clock outline
-            for i in range(60):
-                if i % 5 == 0:  # Hours
-                    if i % 15 == 0:
-                        self.led_array[self.led_pixel(i)][
-                            0] = HIGH_HOUR_BRIGHTNESS
-                        self.led_array[self.led_pixel(i)][
-                            1] = HIGH_HOUR_BRIGHTNESS
-                        self.led_array[self.led_pixel(i)][
-                            2] = HIGH_HOUR_BRIGHTNESS
-                    else:
-                        self.led_array[self.led_pixel(i)][
-                            0] = LOW_HOUR_BRIGHTNESS
-                        self.led_array[self.led_pixel(i)][
-                            1] = LOW_HOUR_BRIGHTNESS
-                        self.led_array[self.led_pixel(i)][
-                            2] = LOW_HOUR_BRIGHTNESS
+            for i in range(12):  # Hours
+                if i % 3 == 0:
+                    self.led_array[self.led_pixel(i * 5)][
+                        0] = HIGH_HOUR_BRIGHTNESS
+                    self.led_array[self.led_pixel(i * 5)][
+                        1] = HIGH_HOUR_BRIGHTNESS
+                    self.led_array[self.led_pixel(i * 5)][
+                        2] = HIGH_HOUR_BRIGHTNESS
                 else:
-                    self.led_array[self.led_pixel(i)][0] = 0
-                    self.led_array[self.led_pixel(i)][1] = 0
-                    self.led_array[self.led_pixel(i)][2] = 0
+                    self.led_array[self.led_pixel(i * 5)][
+                        0] = LOW_HOUR_BRIGHTNESS
+                    self.led_array[self.led_pixel(i * 5)][
+                        1] = LOW_HOUR_BRIGHTNESS
+                    self.led_array[self.led_pixel(i * 5)][
+                        2] = LOW_HOUR_BRIGHTNESS
+
                 self.led_strip.setPixelColorRGB(
-                    self.led_pixel(i),
-                    self.led_array[self.led_pixel(i)][0],
-                    self.led_array[self.led_pixel(i)][1],
-                    self.led_array[self.led_pixel(i)][2],
+                    self.led_pixel(i * 5),
+                    self.led_array[self.led_pixel(i * 5)][0],
+                    self.led_array[self.led_pixel(i * 5)][1],
+                    self.led_array[self.led_pixel(i * 5)][2],
                 )
                 self.led_strip.show()
-                time.sleep(0.02)
+                time.sleep(0.1)
             self.locks['led'].release()
 
     def on_second(self):
@@ -488,11 +496,12 @@ class ClockStationDaemon(object):
         self.locks['lcd'].release()
 
     def led_pixel(self, px_id):
-        """Allocates a pixel index in the clock"""
+        """Allocates a pixel index in the clock with a base of 60"""
 
+        px_id = px_id % 60  # No values over 60 allowed
         if not LED_CLOCKWISE:  # Reverse if neccessary
-            px_id = LED_COUNT - px_id
-        px_id = (px_id + LED_TOP) % LED_COUNT  # Adjust to top
+            px_id = 60 - px_id
+        px_id = (px_id + LED_TOP) % 60  # Adjust to top
         # Allocate towards a base of 60 and return value
         return int(round((px_id + 1) * LED_COUNT / 60) - 1)
 

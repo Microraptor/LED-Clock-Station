@@ -294,15 +294,15 @@ class ClockStationDaemon(object):
         day_offset = (24 - self.hour) * 3600 - hour_offset
         week_offset = (24 - datetime.datetime.now().day) * 86400 - day_offset
 
-        if self.hour > 12:  # Put in 12h format
-            self.hour = self.hour - 12
+        # Locate hour on clock
+        self.hour = (self.hour % 12) * 5 + int(self.minute // 12)
 
         # Run current time once
         if LED_ENABLED:
             self.locks['led'].acquire()
             self.led_overlay(self.second, 0, 255, 0)
             self.led_overlay(self.minute, 255, 0, 0)
-            self.led_overlay(self.hour * 5, 0, 0, 255)
+            self.led_overlay(self.hour, 0, 0, 255)
             self.led_strip.show()
             self.locks['led'].release()
         self.on_day()
@@ -416,18 +416,15 @@ class ClockStationDaemon(object):
         self.led_overlay(self.minute, 255, 0, 0, substract=True)
         self.minute = (self.minute + 1) % 60
         self.led_overlay(self.minute, 255, 0, 0)
+        if self.minute % 12 == 0:  # Move hour a bit
+            self.led_overlay(self.hour, 0, 0, 255, substract=True)
+            self.hour = (self.hour + 1) % 60
+            self.led_overlay(self.hour, 0, 0, 255)
         self.led_strip.show()
         self.locks['led'].release()
 
     def on_hour(self):
         """This function is started in its own thread each hour"""
-
-        self.locks['led'].acquire()
-        self.led_overlay(self.hour * 5, 0, 0, 255, substract=True)
-        self.hour = (self.hour + 1) % 12
-        self.led_overlay(self.hour * 5, 0, 0, 255)
-        self.led_strip.show()
-        self.locks['led'].release()
 
     def on_day(self):
         """This function is started in its own thread each day"""

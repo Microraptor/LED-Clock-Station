@@ -99,8 +99,8 @@ class ClockStationDaemon(object):
         """The constructor which assigns attributes"""
 
         self.stdin_path = '/dev/null'
-        self.stdout_path = '/dev/null'
-        self.stderr_path = '/dev/null'
+        self.stdout_path = '/dev/tty'
+        self.stderr_path = '/dev/tty'
         self.pidfile_path = '/var/run/clockStation.pid'
         self.pidfile_timeout = 5
 
@@ -324,10 +324,27 @@ class ClockStationDaemon(object):
         if LED_ENABLED:
             self.locks['led'].acquire()
             # Startup circle animation
-            for i in range(60):
-                self.led_strip.setPixelColorRGB(self.led_pixel(i), 255, 0, 0)
+            for i in range(30):
+                for j in range(i):
+                    self.led_strip.setPixelColorRGB(
+                        self.led_pixel(j),
+                        0,
+                        255 - int(i * 255 // 30),
+                        int(i * 255 // 30)
+                    )
                 self.led_strip.show()
                 time.sleep(0.02)
+            for i in range(30, 60):
+                for j in range(i):
+                    self.led_strip.setPixelColorRGB(
+                        self.led_pixel(j),
+                        int((i - 30) * 255 // 30),
+                        0,
+                        255 - int((i - 30) * 255 // 30)
+                    )
+                self.led_strip.show()
+                time.sleep(0.02)
+
             # Clock outline
             for i in range(60):
                 if i % 5 == 0:  # Hours

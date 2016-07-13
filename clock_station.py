@@ -133,7 +133,20 @@ class ClockStationDaemon(object):
     def run(self):
         """Creates objects, threads and is running the show"""
 
-        # Initalize hardware
+        self.message("Clock Station started!")
+        self.init_hardware()
+        self.startup()
+        if LED_ENABLED:
+            self.clock_outline()
+        self.start_threads()
+        # Wait until termination
+        signal.pause()
+        self.message("Clock Station shutdown!")
+        self.shutdown()
+
+    def init_hardware(self):
+        """Initalize hardware"""
+
         GPIO.setmode(GPIO.BCM)
 
         if LED_ENABLED:
@@ -189,8 +202,87 @@ class ClockStationDaemon(object):
         if PIR_ENABLED:
             GPIO.setup(PIR_PIN, GPIO.IN)
 
-        self.message("Clock Station started!")
-        self.startup()
+    def startup(self):
+        """Startup animation"""
+
+        if DISP_ENABLED:
+            self.locks['disp'].acquire()
+            image = Image.open('/home/pi/scripts/dragon.png').resize(
+                (self.disp.width, self.disp.height),
+                Image.ANTIALIAS).convert('1')
+            self.disp.image(image)
+            self.disp.display()
+            self.locks['disp'].release()
+
+        if LED_ENABLED:
+            self.locks['led'].acquire()
+            # Startup circle animation
+            for i in range(30):
+                for j in range(i):
+                    self.led_strip.setPixelColorRGB(
+                        self.led_pixel(j),
+                        255 - int(i * 255 // 30),
+                        int(i * 255 // 30),
+                        0
+                    )
+                self.led_strip.show()
+                time.sleep(0.02)
+            for i in range(30, 60):
+                for j in range(i):
+                    self.led_strip.setPixelColorRGB(
+                        self.led_pixel(j),
+                        0,
+                        255 - int((i - 30) * 255 // 30),
+                        int((i - 30) * 255 // 30),
+                    )
+                self.led_strip.show()
+                time.sleep(0.02)
+            # Clear LEDs
+            for i in range(self.led_strip.numPixels()):
+                self.led_strip.setPixelColorRGB(self.led_pixel(i), 0, 0, 0)
+                for j in range(i + 1, self.led_strip.numPixels()):
+                    self.led_strip.setPixelColorRGB(
+                        self.led_pixel(j),
+                        int(i * 255 // self.led_strip.numPixels()),
+                        0,
+                        255 - int(i * 255 // self.led_strip.numPixels()),
+                    )
+                self.led_strip.show()
+                time.sleep(0.02)
+            self.locks['led'].release()
+
+    def clock_outline(self):
+        """The outline of the clock is created here"""
+
+        self.locks['led'].acquire()
+        for i in range(12):  # Hours
+            if i % 3 == 0:
+                self.led_array[self.led_pixel(i * 5)][
+                    0] = HIGH_HOUR_BRIGHTNESS
+                self.led_array[self.led_pixel(i * 5)][
+                    1] = HIGH_HOUR_BRIGHTNESS
+                self.led_array[self.led_pixel(i * 5)][
+                    2] = HIGH_HOUR_BRIGHTNESS
+            else:
+                self.led_array[self.led_pixel(i * 5)][
+                    0] = LOW_HOUR_BRIGHTNESS
+                self.led_array[self.led_pixel(i * 5)][
+                    1] = LOW_HOUR_BRIGHTNESS
+                self.led_array[self.led_pixel(i * 5)][
+                    2] = LOW_HOUR_BRIGHTNESS
+
+            self.led_strip.setPixelColorRGB(
+                self.led_pixel(i * 5),
+                self.led_array[self.led_pixel(i * 5)][0],
+                self.led_array[self.led_pixel(i * 5)][1],
+                self.led_array[self.led_pixel(i * 5)][2],
+            )
+            self.led_strip.show()
+            time.sleep(0.1)
+        self.locks['led'].release()
+
+    def start_threads(self):
+        """Setup and start timers and threads"""
 
         # Create times
         self.second = datetime.datetime.now().second
@@ -281,11 +373,9 @@ class ClockStationDaemon(object):
         if LCD_ENABLED:
             thread_date.start()
 
-        # Wait until termination
-        signal.pause()
-        self.message("Clock Station shutdown!")
+    def shutdown(self):
+        """Clear screens and turn everything off"""
 
-        # Turn everything off
         if DISP_ENABLED:
             self.locks['disp'].acquire()
             self.disp.clear()
@@ -308,81 +398,6 @@ class ClockStationDaemon(object):
             self.locks['led'].release()
 
         GPIO.cleanup()
-
-    def startup(self):
-        """Startup animation and clock setup"""
-
-        if DISP_ENABLED:
-            self.locks['disp'].acquire()
-            image = Image.open('/home/pi/scripts/dragon.png').resize(
-                (self.disp.width, self.disp.height),
-                Image.ANTIALIAS).convert('1')
-            self.disp.image(image)
-            self.disp.display()
-            self.locks['disp'].release()
-
-        if LED_ENABLED:
-            self.locks['led'].acquire()
-            # Startup circle animation
-            for i in range(30):
-                for j in range(i):
-                    self.led_strip.setPixelColorRGB(
-                        self.led_pixel(j),
-                        255 - int(i * 255 // 30),
-                        int(i * 255 // 30),
-                        0
-                    )
-                self.led_strip.show()
-                time.sleep(0.02)
-            for i in range(30, 60):
-                for j in range(i):
-                    self.led_strip.setPixelColorRGB(
-                        self.led_pixel(j),
-                        0,
-                        255 - int((i - 30) * 255 // 30),
-                        int((i - 30) * 255 // 30),
-                    )
-                self.led_strip.show()
-                time.sleep(0.02)
-            # Clear LEDs
-            for i in range(self.led_strip.numPixels()):
-                self.led_strip.setPixelColorRGB(self.led_pixel(i), 0, 0, 0)
-                for j in range(i + 1, self.led_strip.numPixels()):
-                    self.led_strip.setPixelColorRGB(
-                        self.led_pixel(j),
-                        int(i * 255 // self.led_strip.numPixels()),
-                        0,
-                        255 - int(i * 255 // self.led_strip.numPixels()),
-                    )
-                self.led_strip.show()
-                time.sleep(0.02)
-
-            # Clock outline
-            for i in range(12):  # Hours
-                if i % 3 == 0:
-                    self.led_array[self.led_pixel(i * 5)][
-                        0] = HIGH_HOUR_BRIGHTNESS
-                    self.led_array[self.led_pixel(i * 5)][
-                        1] = HIGH_HOUR_BRIGHTNESS
-                    self.led_array[self.led_pixel(i * 5)][
-                        2] = HIGH_HOUR_BRIGHTNESS
-                else:
-                    self.led_array[self.led_pixel(i * 5)][
-                        0] = LOW_HOUR_BRIGHTNESS
-                    self.led_array[self.led_pixel(i * 5)][
-                        1] = LOW_HOUR_BRIGHTNESS
-                    self.led_array[self.led_pixel(i * 5)][
-                        2] = LOW_HOUR_BRIGHTNESS
-
-                self.led_strip.setPixelColorRGB(
-                    self.led_pixel(i * 5),
-                    self.led_array[self.led_pixel(i * 5)][0],
-                    self.led_array[self.led_pixel(i * 5)][1],
-                    self.led_array[self.led_pixel(i * 5)][2],
-                )
-                self.led_strip.show()
-                time.sleep(0.1)
-            self.locks['led'].release()
 
     def on_second(self):
         """This function is started in its own thread each second"""

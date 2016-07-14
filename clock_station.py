@@ -86,7 +86,7 @@ class ThreadLoop(threading.Thread):
     def run(self):
         """Repeatedly calls the target until the stop event is triggered"""
 
-        # while loop only true if event true and false fi timeout
+        # while loop only true if event true and false if timeout
         while not self._stop_event.wait(self._next_call - time.time()):
             self._target()
             self._next_call = self._next_call + self._time_increment
@@ -99,8 +99,8 @@ class ClockStationDaemon(object):
         """The constructor which assigns attributes"""
 
         self.stdin_path = '/dev/null'
-        self.stdout_path = '/dev/tty'
-        self.stderr_path = '/dev/tty'
+        self.stdout_path = '/dev/null'
+        self.stderr_path = '/dev/null'
         self.pidfile_path = '/var/run/clockStation.pid'
         self.pidfile_timeout = 5
 
@@ -311,7 +311,7 @@ class ClockStationDaemon(object):
 
         # Create thread loops
         thread_second = ThreadLoop(
-            0,
+            1,
             1.0,
             self.on_second,
             self.stop_flag)
@@ -336,17 +336,17 @@ class ClockStationDaemon(object):
             self.on_week,
             self.stop_flag)
         thread_dht = ThreadLoop(
-            0,
+            1,
             DHT_POLL_TIME,
             self.show_dht,
             self.stop_flag)
         thread_light = ThreadLoop(
-            0,
+            1,
             LIGHT_POLL_TIME,
             self.show_light,
             self.stop_flag)
         thread_pir = ThreadLoop(
-            0,
+            1,
             PIR_POLL_TIME,
             self.show_pir,
             self.stop_flag)

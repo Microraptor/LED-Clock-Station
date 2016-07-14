@@ -426,6 +426,22 @@ class ClockStationDaemon(object):
     def on_hour(self):
         """This function is started in its own thread each hour"""
 
+        # Synchronize running attribute time with system clock
+        time.sleep(30)  # Makes absolutely sure to get the min and hour right
+        self.locks['led'].acquire()
+        self.led_overlay(self.second, 0, 255, 0, substract=True)
+        self.led_overlay(self.minute, 255, 0, 0, substract=True)
+        self.led_overlay(self.hour, 0, 0, 255, substract=True)
+        self.second = datetime.datetime.now().second
+        self.minute = datetime.datetime.now().minute
+        self.hour = (datetime.datetime.now().hour %
+                     12) * 5 + int(self.minute // 12)
+        self.led_overlay(self.second, 0, 255, 0)
+        self.led_overlay(self.minute, 255, 0, 0)
+        self.led_overlay(self.hour, 0, 0, 255)
+        self.led_strip.show()
+        self.locks['led'].release()
+
     def on_day(self):
         """This function is started in its own thread each day"""
 

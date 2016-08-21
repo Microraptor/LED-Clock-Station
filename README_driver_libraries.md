@@ -49,6 +49,18 @@ _5V-12V Vcc, <1mA, 3.3V signal_
 when motion is detected signal is high
 use RPi.GPIO library for input pin
 
+## MOSFET
+
+_5V logic_  
+**needs 5V logic -> use level converter from 3.3V**  
+**best is external power for VCC**  
+**use heat sink if used with high current**  
+**it is best to place a diode parallel to the load**
+
+[http://elinux.org/RPi_GPIO_Interface_Circuits#Using_a_FET](http://elinux.org/RPi_GPIO_Interface_Circuits#Using_a_FET)
+
+the MOSFET can be used to drive a standard 120mm computer fan (at 5V it runs nice and quiet)
+
 ## Relay
 
 _3.3V logic, 5V relay_  
